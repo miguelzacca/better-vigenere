@@ -1,5 +1,11 @@
 type ByteSize = 8 | 16 | 32 | 64 | 128 | 256
 
+interface IVigenere {
+  generateKey(length: number): Buffer
+  encrypt(plainText: Buffer, key: Buffer): Buffer
+  decrypt(cipherText: Buffer, key: Buffer): Buffer
+}
+
 interface ProcessBytes {
   input: Buffer
   key: Buffer
@@ -11,7 +17,7 @@ interface VigenereOptions {
   ivLength?: ByteSize
 }
 
-export class Vigenere {
+export class Vigenere implements IVigenere {
   static #BYTE_RANGE = 256
   #IV_LENGTH: ByteSize
 
@@ -20,7 +26,7 @@ export class Vigenere {
   }
 
   #processBytes({ input, key, iv, encrypt }: ProcessBytes) {
-    let output = Buffer.allocUnsafe(input.length)
+    const output = Buffer.allocUnsafe(input.length)
 
     const keyLength = key.length
     const ivLength = iv ? iv.length : 0
@@ -43,8 +49,8 @@ export class Vigenere {
     return this.#processBytes({ input: key, key: iv, encrypt: true })
   }
 
-  generateKey(length: number) {
-    let key = Buffer.allocUnsafe(length)
+  generateKey(length: number): Buffer {
+    const key = Buffer.allocUnsafe(length)
 
     for (let i = 0; i < length; i++) {
       key[i] = (Math.random() * Vigenere.#BYTE_RANGE) | 0
@@ -53,7 +59,7 @@ export class Vigenere {
     return key
   }
 
-  encrypt(plainText: Buffer, key: Buffer) {
+  encrypt(plainText: Buffer, key: Buffer): Buffer {
     const iv = this.generateKey(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
 
@@ -67,7 +73,7 @@ export class Vigenere {
     return Buffer.concat([iv, output])
   }
 
-  decrypt(cipherText: Buffer, key: Buffer) {
+  decrypt(cipherText: Buffer, key: Buffer): Buffer {
     const iv = cipherText.subarray(0, this.#IV_LENGTH)
     const input = cipherText.subarray(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
