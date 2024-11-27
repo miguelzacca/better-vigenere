@@ -1,100 +1,76 @@
-export interface VigenereOptions {
-  encoding?: BufferEncoding
-}
+type ByteSize = 8 | 16 | 32 | 64 | 128 | 256
 
-export interface GenerateKey extends VigenereOptions {
-  length?: number
-}
-
-interface ProcessText {
-  input: string
-  key: string
-  iv?: string
+interface ProcessBytes {
+  input: Buffer
+  key: Buffer
+  iv?: Buffer
   encrypt?: boolean
 }
 
+interface VigenereOptions {
+  ivLength?: ByteSize
+}
+
 export class Vigenere {
-  static #IV_LENGTH = 16
-
-  #chars: string[]
-  #encoding: BufferEncoding
-
-  #generateRandomChars() {
-    const chars = Array.from({ length: 255 }, (_, i) => String.fromCharCode(i))
-
-    for (let i = 0; i < chars.length; i++) {
-      const j = Math.floor(Math.random() * (i + 1))
-      const tmp = chars[i]
-      chars[i] = chars[j]
-      chars[j] = tmp
-    }
-
-    return chars
-  }
+  static #BYTE_RANGE = 256
+  #IV_LENGTH: ByteSize
 
   constructor(options?: VigenereOptions) {
-    this.#encoding = options?.encoding || 'utf-8'
-    this.#chars = this.#generateRandomChars()
+    this.#IV_LENGTH = options?.ivLength || 16
   }
 
-  #processText({ input, key, iv, encrypt }: ProcessText) {
-    let output = ''
+  #processBytes({ input, key, iv, encrypt }: ProcessBytes) {
+    let output = Buffer.allocUnsafe(input.length)
+
+    const keyLength = key.length
+    const ivLength = iv ? iv.length : 0
+    const ivIsDefined = iv !== undefined
 
     for (let i = 0; i < input.length; i++) {
-      const leftIndex = this.#chars.indexOf(input[i])
-      const rightIndex = this.#chars.indexOf(key[i % key.length])
-      const ivIndex = iv ? this.#chars.indexOf(iv[i % iv.length]) : 0
+      const keyByte = key[i % keyLength]
+      const ivByte = ivIsDefined ? iv[i & (ivLength - 1)] : 0
 
-      const calc = encrypt ? leftIndex + rightIndex : leftIndex - rightIndex
-      const increment = encrypt ? ivIndex : this.#chars.length * 2 - ivIndex
+      const calc = encrypt ? input[i] + keyByte : input[i] - keyByte
+      const increment = encrypt ? ivByte : Vigenere.#BYTE_RANGE - ivByte
 
-      const newIndex = (calc + increment) % this.#chars.length
-      output += this.#chars[newIndex]
+      output[i] = (calc + increment) % Vigenere.#BYTE_RANGE
     }
 
     return output
   }
 
-  #derivedKey(key: string, iv: string) {
-    return this.#processText({ input: key, key: iv, encrypt: true })
+  #derivedKey(key: Buffer, iv: Buffer) {
+    return this.#processBytes({ input: key, key: iv, encrypt: true })
   }
 
-  generateKey(options?: GenerateKey) {
-    const encoding = options?.encoding || 'utf-8'
-    const length = options?.length || Vigenere.#IV_LENGTH
-
-    let key = ''
+  generateKey(length: number) {
+    let key = Buffer.allocUnsafe(length)
 
     for (let i = 0; i < length; i++) {
-      const randomIndex = Math.floor(Math.random() * this.#chars.length)
-      key += this.#chars[randomIndex]
+      key[i] = (Math.random() * Vigenere.#BYTE_RANGE) | 0
     }
 
-    return Buffer.from(key).toString(encoding)
+    return key
   }
 
-  encrypt(plainText: string, key: string) {
-    const iv = this.generateKey()
+  encrypt(plainText: Buffer, key: Buffer) {
+    const iv = this.generateKey(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
 
-    const output = this.#processText({
+    const output = this.#processBytes({
       input: plainText,
       key: derivedKey,
       iv,
       encrypt: true,
     })
 
-    const payload = iv.concat(output)
-    return Buffer.from(payload).toString(this.#encoding)
+    return Buffer.concat([iv, output])
   }
 
-  decrypt(cipherText: string, key: string) {
-    const payload = Buffer.from(cipherText, this.#encoding).toString()
-
-    const iv = payload.slice(0, Vigenere.#IV_LENGTH)
-    const input = payload.slice(Vigenere.#IV_LENGTH)
-
+  decrypt(cipherText: Buffer, key: Buffer) {
+    const iv = cipherText.subarray(0, this.#IV_LENGTH)
+    const input = cipherText.subarray(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
-    return this.#processText({ input, key: derivedKey, iv })
+    return this.#processBytes({ input, key: derivedKey, iv })
   }
 }
