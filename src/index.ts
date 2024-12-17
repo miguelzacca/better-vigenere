@@ -23,18 +23,22 @@ export class Vigenere implements IVigenere {
   static #BYTE_RANGE = 65536
   #IV_LENGTH: ByteSize
 
+  static get ENCODING(): 'utf-16le' {
+    return 'utf-16le'
+  }
+
   constructor(options?: VigenereOptions) {
     this.#IV_LENGTH = options?.ivLength || 16
   }
 
-  #utf8To16le(buffer: Buffer) {
+  #utf8To16le(buffer: Buffer): Buffer {
     if (isUtf8(buffer)) {
-      return Buffer.from(buffer.toString(), 'utf16le')
+      return Buffer.from(buffer.toString(), Vigenere.ENCODING)
     }
     return buffer
   }
 
-  #processBytes({ input, key, iv, encrypt }: ProcessBytes) {
+  #processBytes({ input, key, iv, encrypt }: ProcessBytes): Buffer {
     const output = Buffer.allocUnsafe(input.length)
 
     const keyLength = key.length / 2
@@ -60,7 +64,7 @@ export class Vigenere implements IVigenere {
     return output
   }
 
-  #derivedKey(key: Buffer, iv: Buffer) {
+  #derivedKey(key: Buffer, iv: Buffer): Buffer {
     return this.#processBytes({ input: key, key: iv, encrypt: true })
   }
 
