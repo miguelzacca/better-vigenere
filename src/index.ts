@@ -37,7 +37,7 @@ export class Vigenere implements IVigenere {
     }
 
     if ((data.length & 1) === 1) {
-      return Buffer.concat([data, Buffer.alloc(1)]) as T
+      return Buffer.concat([data, Buffer.alloc(1, 0x20)]) as T
     }
 
     return data
