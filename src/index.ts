@@ -33,10 +33,10 @@ export class Vigenere implements IVigenere {
 
   #adjustLength<T extends Buffer | number>(data: T): T {
     if (typeof data === 'number') {
-      return ((data & 1) === 1 ? data + 1 : data) as T
+      return (data & 1 ? data + 1 : data) as T
     }
 
-    if ((data.length & 1) === 1) {
+    if (data.length & 1) {
       return Buffer.concat([data, Buffer.alloc(1, 0x20)]) as T
     }
 
