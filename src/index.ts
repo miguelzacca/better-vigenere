@@ -108,8 +108,9 @@ export class Vigenere implements IVigenere {
   }
 
   decrypt(cipherText: Buffer, key: Buffer): Buffer {
-    const iv = cipherText.subarray(0, this.#IV_LENGTH)
-    const input = cipherText.subarray(this.#IV_LENGTH)
+    const adjustedTextLength = this.#adjustLength(cipherText)
+    const iv = adjustedTextLength.subarray(0, this.#IV_LENGTH)
+    const input = adjustedTextLength.subarray(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
     return this.#processBytes({ input, key: derivedKey, iv })
   }
