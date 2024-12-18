@@ -23,12 +23,24 @@ export class Vigenere implements IVigenere {
   static #BYTE_RANGE = 65536
   #IV_LENGTH: ByteSize
 
-  static get ENCODING(): 'utf-16le' {
-    return 'utf-16le'
+  static get ENCODING(): 'utf16le' {
+    return 'utf16le'
   }
 
   constructor(options?: VigenereOptions) {
     this.#IV_LENGTH = options?.ivLength || 16
+  }
+
+  #adjustLength<T extends Buffer | number>(data: T): T {
+    if (typeof data === 'number') {
+      return ((data & 1) === 1 ? data + 1 : data) as T
+    }
+
+    if ((data.length & 1) === 1) {
+      return Buffer.concat([data, Buffer.alloc(1)]) as T
+    }
+
+    return data
   }
 
   #utf8To16le(buffer: Buffer): Buffer {
@@ -69,9 +81,10 @@ export class Vigenere implements IVigenere {
   }
 
   generateKey(length: number): Buffer {
-    const key = Buffer.allocUnsafe(length)
+    const adjustedLength = this.#adjustLength(length)
+    const key = Buffer.allocUnsafe(adjustedLength)
 
-    for (let i = 0; i < length / 2; i++) {
+    for (let i = 0; i < adjustedLength / 2; i++) {
       key.writeUint16LE((Math.random() * Vigenere.#BYTE_RANGE) | 0, i * 2)
     }
 
@@ -79,7 +92,8 @@ export class Vigenere implements IVigenere {
   }
 
   encrypt(plainText: Buffer, key: Buffer): Buffer {
-    const text = this.#utf8To16le(plainText)
+    const adjustedTextLength = this.#adjustLength(plainText)
+    const text = this.#utf8To16le(adjustedTextLength)
     const iv = this.generateKey(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
 
