@@ -5,7 +5,7 @@
     "typescript": "^5.7.2"
   },
   "name": "better-vigenere",
-  "version": "3.1.4",
+  "version": "3.1.5",
   "directories": {
     "lib": "lib"
   },

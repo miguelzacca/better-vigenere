@@ -1,5 +1,3 @@
-import { isUtf8 } from 'node:buffer'
-
 type ByteSize = 8 | 16 | 32 | 64 | 128 | 256
 
 interface IVigenere {
@@ -44,10 +42,7 @@ export class Vigenere implements IVigenere {
   }
 
   #utf8To16le(buffer: Buffer): Buffer {
-    if (isUtf8(buffer)) {
-      return Buffer.from(buffer.toString(), Vigenere.ENCODING)
-    }
-    return buffer
+    return Buffer.from(buffer.toString(), Vigenere.ENCODING)
   }
 
   #processBytes({ input, key, iv, encrypt }: ProcessBytes): Buffer {
@@ -108,9 +103,8 @@ export class Vigenere implements IVigenere {
   }
 
   decrypt(cipherText: Buffer, key: Buffer): Buffer {
-    const adjustedTextLength = this.#adjustLength(cipherText)
-    const iv = adjustedTextLength.subarray(0, this.#IV_LENGTH)
-    const input = adjustedTextLength.subarray(this.#IV_LENGTH)
+    const iv = cipherText.subarray(0, this.#IV_LENGTH)
+    const input = cipherText.subarray(this.#IV_LENGTH)
     const derivedKey = this.#derivedKey(key, iv)
     return this.#processBytes({ input, key: derivedKey, iv })
   }
