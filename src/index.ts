@@ -45,7 +45,7 @@ export class Vigenere implements VigenereProperties {
 
     const padding = getPadding(data.length)
     if (padding) {
-      const newData = Buffer.concat([data, Buffer.alloc(padding, 0x20)]) as T
+      const newData = Buffer.concat([data, Buffer.alloc(padding)]) as T
       return [newData, padding]
     }
 
@@ -60,11 +60,10 @@ export class Vigenere implements VigenereProperties {
     const ivIsDefined = iv !== undefined
 
     for (let i = 0; i < input.length; i++) {
-      const inputByte = input.readUint8(i)
       const keyByte = key[i % keyLength]
       const ivByte = ivIsDefined ? iv.readUint32LE((i & (ivLength - 1)) * 4) : 0
 
-      const newByte = (inputByte + keyByte + ivByte) % Vigenere.#I32_RANGE
+      const newByte = (input[i] + keyByte + ivByte) % Vigenere.#I32_RANGE
       const normalized = (newByte + Vigenere.#I32_RANGE) % Vigenere.#I32_RANGE
 
       output.writeUint32LE(normalized, i * 4)
@@ -124,8 +123,10 @@ export class Vigenere implements VigenereProperties {
   decrypt(cipherText: Buffer, key: Buffer): Buffer {
     const iv = cipherText.subarray(1, this.#IV_LENGTH + 1)
     const input = cipherText.subarray(this.#IV_LENGTH + 1)
+
     const derivedKey = this.#derivedKey(key, iv)
     const output = this.#processDecrypt({ input, key: derivedKey, iv })
+
     return output.subarray(0, -cipherText[0] || output.length)
   }
 }
